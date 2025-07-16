@@ -1,10 +1,13 @@
 import React from 'react';
-import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, Box, IconButton, useTheme } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 
-export default function Layout({ children }) {
+export default function Layout({ children, colorMode }) {
+    const theme = useTheme();
     const navigate = useNavigate();
-    const handleLogout = () => {
+    const logout = () => {
         localStorage.removeItem('token');
         navigate('/login');
     };
@@ -13,20 +16,19 @@ export default function Layout({ children }) {
         <>
             <AppBar position="static">
                 <Toolbar>
-                    <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                        Service Request
-                    </Typography>
-                    <Button color="inherit" component={Link} to="/">Dashboard</Button>
-                    <Button color="inherit" component={Link} to="/tickets">Tickets</Button>
-                    <Button color="inherit" component={Link} to="/users">Users</Button>
-                    <Button color="inherit" component={Link} to="/categories">Categories</Button>
-                    <Button color="inherit" component={Link} to="/priorities">Priorities</Button>
-                    <Button color="inherit" onClick={handleLogout}>Logout</Button>
+                    <Typography variant="h6" sx={{ flexGrow: 1 }}>Sistema de Chamados</Typography>
+                    <IconButton color="inherit" onClick={colorMode.toggleColorMode}>
+                        {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+                    </IconButton>
+                    <Button color="inherit" component={Link} to="/">Painel</Button>
+                    <Button color="inherit" component={Link} to="/tickets">Chamados</Button>
+                    <Button color="inherit" component={Link} to="/usuarios">Usuários</Button>
+                    <Button color="inherit" component={Link} to="/categorias">Categorias</Button>
+                    <Button color="inherit" component={Link} to="/prioridades">Prioridades</Button>
+                    <Button color="inherit" onClick={logout}>Sair</Button>
                 </Toolbar>
             </AppBar>
-            <Box sx={{ p: 2 }}>
-                {children}
-            </Box>
+            <Box sx={{ p: 2 }}>{children}</Box>
         </>
     );
 }

@@ -3,7 +3,10 @@ module.exports = (sequelize, DataTypes) => {
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     title: { type: DataTypes.STRING, allowNull: false },
     description: { type: DataTypes.TEXT, allowNull: false },
-    status: { type: DataTypes.ENUM('Open', 'In Progress', 'Pending', 'Closed'), defaultValue: 'Open' }
+    status: {
+      type: DataTypes.ENUM('Aberto', 'Em Andamento', 'Pendente', 'Fechado'),
+      defaultValue: 'Aberto'
+    }
   }, {});
   return Ticket;
 };

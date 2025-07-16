@@ -1,68 +1,57 @@
-// src/components/PriorityManagement.js
 import React, { useEffect, useState } from 'react';
 import {
   Container, Typography, TextField, Button,
-  Table, TableHead, TableRow, TableCell, TableBody, MenuItem, Box
+  Table, TableHead, TableRow, TableCell, TableBody, Box
 } from '@mui/material';
 import api from '../services/api';
 
 export default function PriorityManagement() {
-  const [priorities, setPriorities] = useState([]);
+  const [prs, setPrs] = useState([]);
   const [level, setLevel] = useState('');
 
-  // Carrega prioridades (sem retornar Promise diretamente)
   useEffect(() => {
-    async function fetchPriorities() {
-      try {
-        const res = await api.get('/priorities');
-        setPriorities(res.data);
-      } catch (err) {
-        console.error('Erro ao buscar prioridades:', err);
-      }
+    async function fetch() {
+      const res = await api.get('/priorities');
+      setPrs(res.data);
     }
-    fetchPriorities();
+    fetch();
   }, []);
 
   const handleAdd = async () => {
     try {
       await api.post('/priorities', { level });
       setLevel('');
-      // Recarrega lista após criar
       const res = await api.get('/priorities');
-      setPriorities(res.data);
+      setPrs(res.data);
     } catch (err) {
       if (err.response?.status === 403) {
-        alert('Você precisa ser Admin para criar prioridades.');
+        alert('Acesso negado! Apenas TI pode criar prioridades.');
       } else {
-        alert(err.response?.data?.message || 'Erro ao criar prioridade');
+        alert('Erro ao criar prioridade');
       }
     }
   };
 
   return (
     <Container>
-      <Typography variant="h4" gutterBottom>Priorities</Typography>
-
+      <Typography variant="h4" gutterBottom>Prioridades</Typography>
       <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
         <TextField
-          label="Level"
+          label="Nível"
           value={level}
           onChange={e => setLevel(e.target.value)}
         />
-        <Button variant="contained" onClick={handleAdd}>
-          Add Priority
-        </Button>
+        <Button variant="contained" onClick={handleAdd}>Adicionar</Button>
       </Box>
-
       <Table>
         <TableHead>
           <TableRow>
             <TableCell>ID</TableCell>
-            <TableCell>Level</TableCell>
+            <TableCell>Nível</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {priorities.map(p => (
+          {prs.map(p => (
             <TableRow key={p.id}>
               <TableCell>{p.id}</TableCell>
               <TableCell>{p.level}</TableCell>

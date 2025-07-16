@@ -7,7 +7,7 @@ export default function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('Requester');
+  const [role, setRole] = useState('Solicitante');
   const navigate = useNavigate();
 
   const handleSubmit = async e => {
@@ -16,23 +16,23 @@ export default function Register() {
       await api.post('/auth/register', { name, email, password, role });
       navigate('/login');
     } catch (err) {
-      alert(err.response?.data?.message || 'Registration failed');
+      alert(err.response?.data?.message || 'Erro ao registrar');
     }
   };
 
   return (
     <Container maxWidth="sm">
-      <Typography variant="h4" gutterBottom>Register</Typography>
+      <Typography variant="h4" gutterBottom>Registrar</Typography>
       <form onSubmit={handleSubmit}>
-        <TextField label="Name" fullWidth margin="normal" value={name} onChange={e => setName(e.target.value)} />
+        <TextField label="Nome" fullWidth margin="normal" value={name} onChange={e => setName(e.target.value)} />
         <TextField label="Email" fullWidth margin="normal" value={email} onChange={e => setEmail(e.target.value)} />
-        <TextField label="Password" type="password" fullWidth margin="normal" value={password} onChange={e => setPassword(e.target.value)} />
-        <TextField select label="Role" fullWidth margin="normal" value={role} onChange={e => setRole(e.target.value)}>
-          <MenuItem value="Requester">Requester</MenuItem>
-          <MenuItem value="Technician">Technician</MenuItem>
-          <MenuItem value="Admin">Admin</MenuItem>
+        <TextField label="Senha" type="password" fullWidth margin="normal" value={password} onChange={e => setPassword(e.target.value)} />
+        <TextField select label="Perfil" fullWidth margin="normal" value={role} onChange={e => setRole(e.target.value)}>
+          <MenuItem value="Solicitante">Solicitante</MenuItem>
+          <MenuItem value="TI">TI</MenuItem>
         </TextField>
-        <Button type="submit" variant="contained" fullWidth>Register</Button>
+        <Button type="submit" variant="contained" fullWidth>Registrar</Button>
       </form>
     </Container>
-); }
+  );
+}

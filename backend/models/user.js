@@ -5,14 +5,17 @@ module.exports = (sequelize, DataTypes) => {
     name: { type: DataTypes.STRING, allowNull: false },
     email: { type: DataTypes.STRING, unique: true, allowNull: false },
     password: { type: DataTypes.STRING, allowNull: false },
-    role: { type: DataTypes.ENUM('Requester', 'Technician', 'Admin'), defaultValue: 'Requester' }
+    role: {
+      type: DataTypes.ENUM('Solicitante', 'TI'),
+      defaultValue: 'Solicitante'
+    }
   }, {});
 
-  User.beforeCreate(async (user) => {
+  User.beforeCreate(async user => {
     user.password = await bcrypt.hash(user.password, 10);
   });
 
-  User.prototype.validatePassword = async function(password) {
+  User.prototype.validatePassword = async function (password) {
     return bcrypt.compare(password, this.password);
   };
 

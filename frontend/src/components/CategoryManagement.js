@@ -1,38 +1,46 @@
 // src/components/CategoryManagement.js
 import React, { useEffect, useState } from 'react';
 import {
-  Container, Typography, TextField, Button,
-  Table, TableHead, TableRow, TableCell, TableBody, Box
+  Container,
+  Typography,
+  TextField,
+  Button,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Box
 } from '@mui/material';
 import api from '../services/api';
 
 export default function CategoryManagement() {
-  const [categories, setCategories] = useState([]);
-  const [name, setName] = useState('');
+  const [categorias, setCategorias] = useState([]);
+  const [nome, setNome] = useState('');
 
-  // Carrega categorias
+  // Carrega categorias sem retornar Promise diretamente
   useEffect(() => {
-    async function fetchCategories() {
+    async function fetchCategorias() {
       try {
         const res = await api.get('/categories');
-        setCategories(res.data);
+        setCategorias(res.data);
       } catch (err) {
-        console.error(err);
+        console.error('Erro ao buscar categorias:', err);
       }
     }
-    fetchCategories();
+    fetchCategorias();
   }, []);
 
   const handleAdd = async () => {
     try {
-      await api.post('/categories', { name });
-      setName('');
+      await api.post('/categories', { name: nome });
+      setNome('');
       // Recarrega lista
       const res = await api.get('/categories');
-      setCategories(res.data);
+      setCategorias(res.data);
     } catch (err) {
       if (err.response?.status === 403) {
-        alert('Você precisa estar logado como Admin para criar categorias.');
+        alert('Acesso negado! Apenas TI pode criar categorias.');
       } else {
         alert(err.response?.data?.message || 'Erro ao criar categoria');
       }
@@ -41,16 +49,16 @@ export default function CategoryManagement() {
 
   return (
     <Container>
-      <Typography variant="h4" gutterBottom>Categories</Typography>
+      <Typography variant="h4" gutterBottom>Categorias</Typography>
 
       <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
         <TextField
-          label="Name"
-          value={name}
-          onChange={e => setName(e.target.value)}
+          label="Nome"
+          value={nome}
+          onChange={e => setNome(e.target.value)}
         />
         <Button variant="contained" onClick={handleAdd}>
-          Add Category
+          Adicionar
         </Button>
       </Box>
 
@@ -58,11 +66,11 @@ export default function CategoryManagement() {
         <TableHead>
           <TableRow>
             <TableCell>ID</TableCell>
-            <TableCell>Name</TableCell>
+            <TableCell>Nome</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {categories.map(c => (
+          {categorias.map(c => (
             <TableRow key={c.id}>
               <TableCell>{c.id}</TableCell>
               <TableCell>{c.name}</TableCell>

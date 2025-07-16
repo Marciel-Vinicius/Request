@@ -1,7 +1,14 @@
+// src/components/Login.js
 import React, { useState } from 'react';
-import { TextField, Button, Container, Typography } from '@mui/material';
+import {
+  TextField,
+  Button,
+  Container,
+  Typography,
+  Box
+} from '@mui/material';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { useNavigate } from 'react-router-dom';
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('');
@@ -15,17 +22,48 @@ export default function Login({ onLogin }) {
       onLogin(data.token);
       navigate('/');
     } catch (err) {
-      alert(err.response?.data?.message || 'Login failed');
+      alert(err.response?.data?.message || 'Erro ao entrar');
     }
   };
 
   return (
-    <Container maxWidth="sm">
-      <Typography variant="h4" gutterBottom>Login</Typography>
-      <form onSubmit={handleSubmit}>
-        <TextField label="Email" fullWidth margin="normal" value={email} onChange={e => setEmail(e.target.value)} />
-        <TextField label="Password" type="password" fullWidth margin="normal" value={password} onChange={e => setPassword(e.target.value)} />
-        <Button type="submit" variant="contained" fullWidth>Login</Button>
-      </form>
+    <Container maxWidth="xs">
+      <Box sx={{ mt: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Typography variant="h4" align="center">Entrar</Typography>
+
+        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <TextField
+            label="Email"
+            type="email"
+            required
+            fullWidth
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+          />
+          <TextField
+            label="Senha"
+            type="password"
+            required
+            fullWidth
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+          />
+
+          <Button type="submit" variant="contained" fullWidth>
+            Entrar
+          </Button>
+        </Box>
+
+        {/* Botão para página de registro */}
+        <Button
+          component={Link}
+          to="/register"
+          variant="outlined"
+          fullWidth
+        >
+          Criar Conta
+        </Button>
+      </Box>
     </Container>
-); }
+  );
+}

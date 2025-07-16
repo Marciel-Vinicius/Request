@@ -1,22 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import {
     Container, Typography, TextField, Button,
-    Table, TableHead, TableRow, TableCell, TableBody, MenuItem, Box
+    Table, TableHead, TableRow, TableCell, TableBody,
+    MenuItem, Box
 } from '@mui/material';
 import api from '../services/api';
 
 export default function UserManagement() {
     const [users, setUsers] = useState([]);
     const [form, setForm] = useState({
-        name: '', email: '', password: '', role: 'Requester'
+        name: '', email: '', password: '', role: 'Solicitante'
     });
 
-    const fetchUsers = () => {
-        api.get('/users')
-            .then(res => setUsers(res.data))
-            .catch(() => setUsers([]));
-    };
-    useEffect(fetchUsers, []);
+    // Agora o useEffect chama fetchUsers, não retorna Promise
+    useEffect(() => {
+        async function fetchUsers() {
+            try {
+                const res = await api.get('/users');
+                setUsers(res.data);
+            } catch {
+                setUsers([]);
+            }
+        }
+        fetchUsers();
+    }, []);
 
     const handleChange = e =>
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -24,20 +31,22 @@ export default function UserManagement() {
     const handleAdd = async () => {
         try {
             await api.post('/auth/register', form);
-            setForm({ name: '', email: '', password: '', role: 'Requester' });
-            fetchUsers();
+            setForm({ name: '', email: '', password: '', role: 'Solicitante' });
+            // Recarrega lista depois de criar
+            const res = await api.get('/users');
+            setUsers(res.data);
         } catch (err) {
-            alert(err.response?.data?.message || 'Error creating user');
+            alert(err.response?.data?.message || 'Erro ao criar usuário');
         }
     };
 
     return (
         <Container>
-            <Typography variant="h4" gutterBottom>Users</Typography>
+            <Typography variant="h4" gutterBottom>Usuários</Typography>
 
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
                 <TextField
-                    label="Name" name="name"
+                    label="Nome" name="name"
                     value={form.name} onChange={handleChange}
                 />
                 <TextField
@@ -45,28 +54,25 @@ export default function UserManagement() {
                     value={form.email} onChange={handleChange}
                 />
                 <TextField
-                    label="Password" type="password" name="password"
+                    label="Senha" type="password" name="password"
                     value={form.password} onChange={handleChange}
                 />
                 <TextField
-                    select label="Role" name="role"
+                    select label="Perfil" name="role"
                     value={form.role} onChange={handleChange}
                 >
-                    {['Requester', 'Technician', 'Admin'].map(r => (
-                        <MenuItem key={r} value={r}>{r}</MenuItem>
-                    ))}
+                    <MenuItem value="Solicitante">Solicitante</MenuItem>
+                    <MenuItem value="TI">TI</MenuItem>
                 </TextField>
-                <Button variant="contained" onClick={handleAdd}>
-                    Add User
-                </Button>
+                <Button variant="contained" onClick={handleAdd}>Adicionar</Button>
             </Box>
 
             <Table>
                 <TableHead>
                     <TableRow>
-                        <TableCell>Name</TableCell>
+                        <TableCell>Nome</TableCell>
                         <TableCell>Email</TableCell>
-                        <TableCell>Role</TableCell>
+                        <TableCell>Perfil</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
