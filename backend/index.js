@@ -7,6 +7,7 @@ const morgan = require('morgan');
 const { sequelize } = require('./models');
 const errorHandler = require('./middleware/errorHandler');
 
+// Rotas
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
 const categoriesRouter = require('./routes/categories');
@@ -16,40 +17,55 @@ const commentsRouter = require('./routes/comments');
 
 const app = express();
 
-// Segurança HTTP headers
+// 1) Segurança nos headers HTTP
 app.use(helmet());
-// Rate limit
-app.use(rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100
-}));
-// Logging
+
+// 2) Limite de requisições
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 100,                  // 100 requisições por IP
+  })
+);
+
+// 3) Logger de requisições
 app.use(morgan('combined'));
-// CORS
-app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
-}));
+
+// 4) CORS configurado
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
+  })
+);
+
+// 5) Body parser
 app.use(express.json());
 
-// Rotas públicas\app.use('/api/auth', authRouter);
+// → Rotas públicas
+app.use('/api/auth', authRouter);
 
-// Rotas protegidas
+// → Rotas protegidas
 app.use('/api/users', usersRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/priorities', prioritiesRouter);
 app.use('/api/tickets', ticketsRouter);
 app.use('/api/comments', commentsRouter);
 
-// Middleware de erro
+// Middleware de tratamento de erros (deve vir por último)
 app.use(errorHandler);
 
-// Conectar ao DB e iniciar servidor
+// Conecta ao banco e inicia o servidor
 const PORT = process.env.PORT || 10000;
-sequelize.authenticate()
+sequelize
+  .authenticate()
   .then(() => {
-    console.log('DB conectado');
-    app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
+    console.log('✅ Conectado ao banco de dados');
+    app.listen(PORT, () => {
+      console.log(`🚀 Backend rodando na porta ${PORT}`);
+    });
   })
-  .catch(err => console.error('Impossível conectar ao DB:', err));
+  .catch((err) => {
+    console.error('❌ Falha ao conectar ao banco:', err);
+  });
