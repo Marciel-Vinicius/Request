@@ -1,32 +1,11 @@
 import React from 'react';
-import { createRoot } from 'react-dom/client';
+import ReactDOM from 'react-dom';
 import App from './App';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { AuthProvider } from './context/AuthContext';
 
-function Root() {
-    const [mode, setMode] = React.useState(
-        localStorage.getItem('theme') || 'light'
-    );
-    const colorMode = React.useMemo(() => ({
-        toggleColorMode: () => {
-            setMode(prev => {
-                const next = prev === 'light' ? 'dark' : 'light';
-                localStorage.setItem('theme', next);
-                return next;
-            });
-        }
-    }), []);
-    const theme = React.useMemo(() => createTheme({
-        palette: { mode }
-    }), [mode]);
-
-    return (
-        <ThemeProvider theme={theme}>
-            <App colorMode={colorMode} />
-        </ThemeProvider>
-    );
-}
-
-const container = document.getElementById('root');
-const root = createRoot(container);
-root.render(<Root />);
+ReactDOM.render(
+    <AuthProvider>
+        <App />
+    </AuthProvider>,
+    document.getElementById('root')
+);

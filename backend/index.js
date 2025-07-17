@@ -1,42 +1,55 @@
 require('dotenv').config();
 const express = require('express');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const cors = require('cors');
-const http = require('http');
-const { Server } = require('socket.io');
-const db = require('./models');
+const morgan = require('morgan');
+const { sequelize } = require('./models');
+const errorHandler = require('./middleware/errorHandler');
+
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
 const categoriesRouter = require('./routes/categories');
 const prioritiesRouter = require('./routes/priorities');
 const ticketsRouter = require('./routes/tickets');
-const { authenticate } = require('./middleware/auth');
+const commentsRouter = require('./routes/comments');
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: '*' }
-});
 
-// Torna o io acessível nas rotas
-app.set('io', io);
-
-app.use(cors());
+// Segurança HTTP headers
+app.use(helmet());
+// Rate limit
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100
+}));
+// Logging
+app.use(morgan('combined'));
+// CORS
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
 app.use(express.json());
 
-app.use('/api/auth', authRouter);
-app.use(authenticate);
+// Rotas públicas\app.use('/api/auth', authRouter);
+
+// Rotas protegidas
 app.use('/api/users', usersRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/priorities', prioritiesRouter);
 app.use('/api/tickets', ticketsRouter);
+app.use('/api/comments', commentsRouter);
 
-db.sequelize.sync({ alter: true }).then(() => {
-  const PORT = process.env.PORT || 5000;
-  server.listen(PORT, () => console.log(`Backend rodando na porta ${PORT}`));
-});
+// Middleware de erro
+app.use(errorHandler);
 
-// Log conexões Socket.IO
-io.on('connection', socket => {
-  console.log('Novo cliente conectado', socket.id);
-  socket.on('disconnect', () => console.log('Cliente desconectado', socket.id));
-});
+// Conectar ao DB e iniciar servidor
+const PORT = process.env.PORT || 10000;
+sequelize.authenticate()
+  .then(() => {
+    console.log('DB conectado');
+    app.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
+  })
+  .catch(err => console.error('Impossível conectar ao DB:', err));

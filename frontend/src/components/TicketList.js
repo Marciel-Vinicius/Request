@@ -1,176 +1,72 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Container,
-  Typography,
-  Button,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  Paper,
-  TextField,
-  MenuItem
-} from '@mui/material';
-import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { io } from 'socket.io-client';
+import Spinner from './Spinner';
+import Notification from './Notification';
+import { Table, TableHead, TableBody, TableRow, TableCell, TablePagination, TextField } from '@mui/material';
 
 export default function TicketList() {
   const [tickets, setTickets] = useState([]);
-  const [categorias, setCategorias] = useState([]);
-  const [prioridades, setPrioridades] = useState([]);
-  const navigate = useNavigate();
-  const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000');
+  const [loading, setLoading] = useState(false);
+  const [notif, setNotif] = useState({ open: false, message: '', severity: 'success' });
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [filter, setFilter] = useState('');
 
-  // Papel do usuário salvo no login
-  const userRole = localStorage.getItem('userRole');
-
-  useEffect(() => {
-    async function fetchAll() {
-      try {
-        const [tkRes, catRes, priRes] = await Promise.all([
-          api.get('/tickets'),
-          api.get('/categories'),
-          api.get('/priorities')
-        ]);
-        setTickets(tkRes.data);
-        setCategorias(catRes.data);
-        setPrioridades(priRes.data);
-      } catch (err) {
-        console.error('Erro ao carregar dados:', err);
-      }
-    }
-    fetchAll();
-
-    socket.on('ticketCreated', t =>
-      setTickets(prev => [t, ...prev])
-    );
-    socket.on('ticketUpdated', t =>
-      setTickets(prev => prev.map(x => (x.id === t.id ? t : x)))
-    );
-
-    return () => socket.disconnect();
-  }, []);
-
-  const handleUpdate = async (id, field, value) => {
+  const fetchTickets = async () => {
+    setLoading(true);
     try {
-      await api.put(`/tickets/${id}`, { [field]: value });
-      // o socket notificará a atualização
+      const { data } = await api.get('/tickets', { params: { q: filter } });
+      setTickets(data.tickets);
     } catch (err) {
-      console.error(`Erro ao atualizar ${field}:`, err);
+      setNotif({ open: true, message: 'Erro ao carregar tickets', severity: 'error' });
+    } finally {
+      setLoading(false);
     }
   };
 
+  useEffect(fetchTickets, [filter]);
+
   return (
-    <Container>
-      <Typography variant="h4" gutterBottom>
-        Chamados
-      </Typography>
-
-      <Button
-        variant="contained"
+    <>
+      <TextField
+        label="Buscar"
+        value={filter}
+        onChange={e => setFilter(e.target.value)}
         sx={{ mb: 2 }}
-        onClick={() => navigate('/tickets/new')}
-      >
-        Novo Chamado
-      </Button>
-
-      <Paper>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Título</TableCell>
-              <TableCell>Solicitante</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Responsável</TableCell>
-              <TableCell>Categoria</TableCell>
-              <TableCell>Prioridade</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {tickets.map(t => (
-              <TableRow key={t.id} hover>
-                <TableCell
-                  sx={{ cursor: 'pointer' }}
-                  onClick={() => navigate(`/tickets/${t.id}`)}
-                >
-                  {t.title}
-                </TableCell>
-                <TableCell>{t.requester?.name || '—'}</TableCell>
-
-                {/* Status sempre editável */}
-                <TableCell>
-                  <TextField
-                    select
-                    size="small"
-                    value={t.status}
-                    onChange={e =>
-                      handleUpdate(t.id, 'status', e.target.value)
-                    }
-                  >
-                    {['Aberto', 'Em Andamento', 'Pendente', 'Fechado'].map(
-                      s => (
-                        <MenuItem key={s} value={s}>
-                          {s}
-                        </MenuItem>
-                      )
-                    )}
-                  </TextField>
-                </TableCell>
-
-                <TableCell>{t.assignee?.name || '—'}</TableCell>
-
-                {/* Categoria: só TI pode editar */}
-                <TableCell>
-                  {userRole === 'TI' ? (
-                    <TextField
-                      select
-                      size="small"
-                      value={t.Category?.id ?? ''}
-                      onChange={e =>
-                        handleUpdate(t.id, 'categoryId', e.target.value)
-                      }
-                    >
-                      <MenuItem value="">—</MenuItem>
-                      {categorias.map(c => (
-                        <MenuItem key={c.id} value={c.id}>
-                          {c.name}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  ) : (
-                    t.Category?.name || '—'
-                  )}
-                </TableCell>
-
-                {/* Prioridade: só TI pode editar */}
-                <TableCell>
-                  {userRole === 'TI' ? (
-                    <TextField
-                      select
-                      size="small"
-                      value={t.Priority?.id ?? ''}
-                      onChange={e =>
-                        handleUpdate(t.id, 'priorityId', e.target.value)
-                      }
-                    >
-                      <MenuItem value="">—</MenuItem>
-                      {prioridades.map(p => (
-                        <MenuItem key={p.id} value={p.id}>
-                          {p.level}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  ) : (
-                    t.Priority?.level || '—'
-                  )}
-                </TableCell>
+      />
+      {loading ? <Spinner /> : (
+        <>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Título</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Ações</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Paper>
-    </Container>
+            </TableHead>
+            <TableBody>
+              {tickets
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map(ticket => (
+                  <TableRow key={ticket.id}>
+                    <TableCell>{ticket.title}</TableCell>
+                    <TableCell>{ticket.status}</TableCell>
+                    <TableCell>…</TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+          <TablePagination
+            component="div"
+            count={tickets.length}
+            page={page}
+            onPageChange={(e, newPage) => setPage(newPage)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={e => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+          />
+        </>
+      )}
+      <Notification {...notif} onClose={() => setNotif({ ...notif, open: false })} />
+    </>
   );
 }
