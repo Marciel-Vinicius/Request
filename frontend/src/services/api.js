@@ -2,8 +2,9 @@ import axios from 'axios';
 import { getToken, clearAuth } from '../utils/auth';
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:10000/api',
-  withCredentials: true
+  // Altere aqui para porta 5000, se seu backend está rodando lá:
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+  withCredentials: true,
 });
 
 api.interceptors.request.use(config => {

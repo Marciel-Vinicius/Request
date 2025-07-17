@@ -1,34 +1,46 @@
-import React from 'react';
-import { AppBar, Toolbar, Typography, Button, Box, IconButton, useTheme } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useContext } from 'react';
+import { Outlet, Link as RouterLink } from 'react-router-dom';
+import { AppBar, Toolbar, Typography, IconButton, Box } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import AddIcon from '@mui/icons-material/Add';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
+import { ColorModeContext } from '../context/ColorModeContext';
 
-export default function Layout({ children, colorMode }) {
+export default function Layout() {
     const theme = useTheme();
-    const navigate = useNavigate();
-    const logout = () => {
-        localStorage.removeItem('token');
-        navigate('/login');
-    };
+    const { toggleColorMode } = useContext(ColorModeContext);
 
     return (
         <>
             <AppBar position="static">
                 <Toolbar>
-                    <Typography variant="h6" sx={{ flexGrow: 1 }}>Sistema de Chamados</Typography>
-                    <IconButton color="inherit" onClick={colorMode.toggleColorMode}>
+                    <Typography
+                        variant="h6"
+                        component={RouterLink}
+                        to="/"
+                        sx={{ flexGrow: 1, textDecoration: 'none', color: 'inherit' }}
+                    >
+                        Service Request
+                    </Typography>
+
+                    <IconButton
+                        component={RouterLink}
+                        to="/tickets/new"
+                        color="inherit"
+                        sx={{ mr: 1 }}
+                    >
+                        <AddIcon />
+                    </IconButton>
+
+                    <IconButton onClick={toggleColorMode} color="inherit">
                         {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
                     </IconButton>
-                    <Button color="inherit" component={Link} to="/">Painel</Button>
-                    <Button color="inherit" component={Link} to="/tickets">Chamados</Button>
-                    <Button color="inherit" component={Link} to="/usuarios">Usuários</Button>
-                    <Button color="inherit" component={Link} to="/categorias">Categorias</Button>
-                    <Button color="inherit" component={Link} to="/prioridades">Prioridades</Button>
-                    <Button color="inherit" onClick={logout}>Sair</Button>
                 </Toolbar>
             </AppBar>
-            <Box sx={{ p: 2 }}>{children}</Box>
+            <Box component="main" sx={{ p: 2 }}>
+                <Outlet />
+            </Box>
         </>
     );
 }

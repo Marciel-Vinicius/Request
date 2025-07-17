@@ -1,68 +1,85 @@
 // src/components/Login.js
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
+  Container,
+  Box,
+  Typography,
   TextField,
   Button,
-  Container,
-  Typography,
-  Box
+  Link,
+  Alert
 } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import { AuthContext } from '../context/AuthContext';
 
-export default function Login({ onLogin }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+export default function Login() {
+  const { login } = useContext(AuthContext);
   const navigate = useNavigate();
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
 
   const handleSubmit = async e => {
     e.preventDefault();
+    setError('');
     try {
-      const { data } = await api.post('/auth/login', { email, password });
-      onLogin(data.token);
+      // Chama o método de login do contexto, que faz o POST /auth/login
+      await login(form.email, form.password);
+      // Se deu certo, vai para a lista de tickets
       navigate('/');
     } catch (err) {
-      alert(err.response?.data?.message || 'Erro ao entrar');
+      // Exibe a mensagem enviada pelo backend (ex: "Credenciais inválidas")
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.errors?.[0]?.msg ||
+        'Erro ao fazer login';
+      setError(msg);
     }
   };
 
   return (
     <Container maxWidth="xs">
-      <Box sx={{ mt: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Typography variant="h4" align="center">Entrar</Typography>
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        sx={{
+          mt: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2
+        }}
+      >
+        <Typography variant="h5" align="center">
+          Entrar no Service Request
+        </Typography>
 
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <TextField
-            label="Email"
-            type="email"
-            required
-            fullWidth
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-          />
-          <TextField
-            label="Senha"
-            type="password"
-            required
-            fullWidth
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-          />
+        {error && <Alert severity="error">{error}</Alert>}
 
-          <Button type="submit" variant="contained" fullWidth>
-            Entrar
-          </Button>
-        </Box>
+        <TextField
+          label="E-mail"
+          type="email"
+          value={form.email}
+          onChange={e => setForm({ ...form, email: e.target.value })}
+          required
+        />
 
-        {/* Botão para página de registro */}
-        <Button
-          component={Link}
-          to="/register"
-          variant="outlined"
-          fullWidth
-        >
-          Criar Conta
+        <TextField
+          label="Senha"
+          type="password"
+          value={form.password}
+          onChange={e => setForm({ ...form, password: e.target.value })}
+          required
+        />
+
+        <Button type="submit" variant="contained" size="large">
+          Entrar
         </Button>
+
+        <Typography variant="body2" align="center">
+          Ainda não tem conta?{' '}
+          <Link component={RouterLink} to="/register">
+            Cadastre‑se
+          </Link>
+        </Typography>
       </Box>
     </Container>
   );

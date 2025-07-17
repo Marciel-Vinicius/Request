@@ -1,71 +1,78 @@
+// backend/index.js
 require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cors = require('cors');
 const morgan = require('morgan');
-const { sequelize } = require('./models');
-const errorHandler = require('./middleware/errorHandler');
-
-// Rotas
+const http = require('http');
+const { Server } = require('socket.io');
+const db = require('./models');
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
 const categoriesRouter = require('./routes/categories');
 const prioritiesRouter = require('./routes/priorities');
 const ticketsRouter = require('./routes/tickets');
-const commentsRouter = require('./routes/comments');
+const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
-// 1) Segurança nos headers HTTP
+// Defina aqui as origens permitidas
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:3000',
+  'http://localhost:3001'
+];
+
 app.use(helmet());
-
-// 2) Limite de requisições
 app.use(
   rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 100,                  // 100 requisições por IP
+    windowMs: 15 * 60 * 1000,
+    max: 100,
   })
 );
-
-// 3) Logger de requisições
 app.use(morgan('combined'));
 
-// 4) CORS configurado
+// CORS dinâmico
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl requests)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS policy: Origin ${origin} not allowed`));
+    },
     credentials: true,
   })
 );
 
-// 5) Body parser
 app.use(express.json());
 
-// → Rotas públicas
+// Rotas públicas
 app.use('/api/auth', authRouter);
 
-// → Rotas protegidas
+// Rotas protegidas
 app.use('/api/users', usersRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/priorities', prioritiesRouter);
 app.use('/api/tickets', ticketsRouter);
-app.use('/api/comments', commentsRouter);
 
-// Middleware de tratamento de erros (deve vir por último)
+// Middleware de erro
 app.use(errorHandler);
 
-// Conecta ao banco e inicia o servidor
-const PORT = process.env.PORT || 10000;
-sequelize
-  .authenticate()
+db.sequelize
+  .sync({ alter: true })
   .then(() => {
-    console.log('✅ Conectado ao banco de dados');
-    app.listen(PORT, () => {
-      console.log(`🚀 Backend rodando na porta ${PORT}`);
-    });
+    const PORT = process.env.PORT || 5000;
+    server.listen(PORT, () => console.log(`🚀 Backend rodando na porta ${PORT}`));
   })
-  .catch((err) => {
-    console.error('❌ Falha ao conectar ao banco:', err);
-  });
+  .catch(err => console.error('❌ Falha ao sincronizar banco:', err));
+
+// Socket.IO (sem alteração)
+io.on('connection', socket => {
+  console.log('🟢 Novo cliente conectado', socket.id);
+  socket.on('disconnect', () => console.log('🔴 Cliente desconectado', socket.id));
+});

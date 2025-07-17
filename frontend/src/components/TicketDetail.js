@@ -1,4 +1,4 @@
-// src/components/TicketDetail.js
+// frontend/src/components/TicketDetail.js
 import React, { useEffect, useState } from 'react';
 import {
   Container, Typography, TextField, Button,
@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import { useParams } from 'react-router-dom';
 import api from '../services/api';
-import { io } from 'socket.io-client';
+import { io as socketClient } from 'socket.io-client';
 
 export default function TicketDetail() {
   const { id } = useParams();
@@ -14,72 +14,76 @@ export default function TicketDetail() {
   const [comment, setComment] = useState('');
   const [categorias, setCategorias] = useState([]);
   const [prioridades, setPrioridades] = useState([]);
-  const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000');
 
   useEffect(() => {
-    async function init() {
-      try {
-        // busca ticket, categorias e prioridades em paralelo
-        const [tRes, cRes, pRes] = await Promise.all([
-          api.get(`/tickets/${id}`),
-          api.get('/categories'),
-          api.get('/priorities')
-        ]);
-        setTicket(tRes.data);
-        setCategorias(cRes.data);
-        setPrioridades(pRes.data);
-      } catch (err) {
+    // 1) Buscar dados iniciais
+    api.get(`/tickets/${id}`)
+      .then(res => setTicket(res.data))
+      .catch(err => {
         console.error(err);
-        alert('Erro ao carregar detalhes do chamado');
-      }
-    }
-    init();
+        alert('Erro ao carregar ticket');
+      });
+    api.get('/categories')
+      .then(res => setCategorias(res.data))
+      .catch(err => console.error(err));
+    api.get('/priorities')
+      .then(res => setPrioridades(res.data))
+      .catch(err => console.error(err));
 
-    // real‑time para atualizações de status ou de qualquer campo
-    socket.on('ticketUpdated', t => {
-      if (t.id === id) setTicket(t);
+    // 2) Configurar Socket.IO
+    const socket = socketClient(
+      process.env.REACT_APP_API_URL || 'http://localhost:5000'
+    );
+    socket.emit('joinTicketRoom', id);
+    socket.on('ticketUpdated', updated => {
+      if (updated.id === id) setTicket(updated);
     });
 
-    return () => socket.disconnect();
+    // 3) Cleanup: remover listener e desconectar socket
+    return () => {
+      socket.off('ticketUpdated');
+      socket.disconnect();
+    };
   }, [id]);
 
-  const handleUpdate = async () => {
-    try {
-      await api.put(`/tickets/${id}`, {
-        title: ticket.title,
-        description: ticket.description,
-        status: ticket.status,
-        categoryId: ticket.categoryId,
-        priorityId: ticket.priorityId
+  const handleUpdate = () => {
+    api.put(`/tickets/${id}`, {
+      title: ticket.title,
+      description: ticket.description,
+      status: ticket.status,
+      categoryId: ticket.categoryId,
+      priorityId: ticket.priorityId,
+    })
+      .then(() => alert('Chamado atualizado!'))
+      .catch(err => {
+        console.error(err);
+        alert(err.response?.data?.message || 'Erro ao salvar');
       });
-      alert('Chamado atualizado!');
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || 'Erro ao salvar alterações');
-    }
   };
 
-  const handleComment = async () => {
-    try {
-      await api.post(`/tickets/${id}/comments`, { content: comment });
-      setComment('');
-      // refetch comentários
-      const { data } = await api.get(`/tickets/${id}`);
-      setTicket(data);
-    } catch (err) {
-      console.error(err);
-      alert('Erro ao adicionar comentário');
-    }
+  const handleComment = () => {
+    api.post(`/tickets/${id}/comments`, { content: comment })
+      .then(() => {
+        setComment('');
+        // Recarrega ticket com comentários
+        return api.get(`/tickets/${id}`);
+      })
+      .then(res => setTicket(res.data))
+      .catch(err => {
+        console.error(err);
+        alert('Erro ao adicionar comentário');
+      });
   };
 
-  if (!ticket) return <Typography>Carregando...</Typography>;
+  if (!ticket) {
+    return <Typography>Carregando...</Typography>;
+  }
 
   return (
     <Container maxWidth="md">
       <Typography variant="h4" gutterBottom>
         Detalhe do Chamado
       </Typography>
-
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <TextField
           label="Título"
@@ -87,7 +91,6 @@ export default function TicketDetail() {
           value={ticket.title}
           onChange={e => setTicket({ ...ticket, title: e.target.value })}
         />
-
         <TextField
           label="Descrição"
           fullWidth
@@ -96,7 +99,6 @@ export default function TicketDetail() {
           value={ticket.description}
           onChange={e => setTicket({ ...ticket, description: e.target.value })}
         />
-
         <TextField
           select
           label="Status"
@@ -108,7 +110,6 @@ export default function TicketDetail() {
             <MenuItem key={s} value={s}>{s}</MenuItem>
           ))}
         </TextField>
-
         <TextField
           select
           label="Categoria"
@@ -120,7 +121,6 @@ export default function TicketDetail() {
             <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
           ))}
         </TextField>
-
         <TextField
           select
           label="Prioridade"
@@ -132,7 +132,6 @@ export default function TicketDetail() {
             <MenuItem key={p.id} value={p.id}>{p.level}</MenuItem>
           ))}
         </TextField>
-
         <Button variant="contained" onClick={handleUpdate}>
           Salvar Alterações
         </Button>

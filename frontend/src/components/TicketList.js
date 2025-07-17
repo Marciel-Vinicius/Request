@@ -2,7 +2,13 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import Spinner from './Spinner';
 import Notification from './Notification';
-import { Table, TableHead, TableBody, TableRow, TableCell, TablePagination, TextField } from '@mui/material';
+import {
+  Table, TableHead, TableBody, TableRow, TableCell, TablePagination,
+  TextField, Box, Button, IconButton
+} from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 export default function TicketList() {
   const [tickets, setTickets] = useState([]);
@@ -16,7 +22,7 @@ export default function TicketList() {
     setLoading(true);
     try {
       const { data } = await api.get('/tickets', { params: { q: filter } });
-      setTickets(data.tickets);
+      setTickets(data.tickets || data);
     } catch (err) {
       setNotif({ open: true, message: 'Erro ao carregar tickets', severity: 'error' });
     } finally {
@@ -24,17 +30,43 @@ export default function TicketList() {
     }
   };
 
-  useEffect(fetchTickets, [filter]);
+  useEffect(() => {
+    fetchTickets();
+  }, [filter]);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Tem certeza que deseja excluir este chamado?')) return;
+    try {
+      await api.delete(`/tickets/${id}`);
+      setNotif({ open: true, message: 'Chamado excluído', severity: 'success' });
+      fetchTickets();
+    } catch {
+      setNotif({ open: true, message: 'Erro ao excluir ticket', severity: 'error' });
+    }
+  };
 
   return (
-    <>
-      <TextField
-        label="Buscar"
-        value={filter}
-        onChange={e => setFilter(e.target.value)}
-        sx={{ mb: 2 }}
-      />
-      {loading ? <Spinner /> : (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+        <TextField
+          label="Buscar"
+          value={filter}
+          onChange={e => setFilter(e.target.value)}
+          fullWidth
+        />
+        <Button
+          variant="contained"
+          component={RouterLink}
+          to="/tickets/new"
+          sx={{ ml: 2 }}
+        >
+          Novo Chamado
+        </Button>
+      </Box>
+
+      {loading ? (
+        <Spinner />
+      ) : (
         <>
           <Table>
             <TableHead>
@@ -51,7 +83,20 @@ export default function TicketList() {
                   <TableRow key={ticket.id}>
                     <TableCell>{ticket.title}</TableCell>
                     <TableCell>{ticket.status}</TableCell>
-                    <TableCell>…</TableCell>
+                    <TableCell>
+                      <IconButton
+                        component={RouterLink}
+                        to={`/tickets/${ticket.id}`}
+                      >
+                        <VisibilityIcon />
+                      </IconButton>
+                      <IconButton
+                        onClick={() => handleDelete(ticket.id)}
+                        color="error"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
                   </TableRow>
                 ))}
             </TableBody>
@@ -60,13 +105,19 @@ export default function TicketList() {
             component="div"
             count={tickets.length}
             page={page}
-            onPageChange={(e, newPage) => setPage(newPage)}
+            onPageChange={(_, p) => setPage(p)}
             rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={e => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+            onRowsPerPageChange={e => { setRowsPerPage(+e.target.value); setPage(0); }}
           />
         </>
       )}
-      <Notification {...notif} onClose={() => setNotif({ ...notif, open: false })} />
-    </>
+
+      <Notification
+        open={notif.open}
+        message={notif.message}
+        severity={notif.severity}
+        onClose={() => setNotif(n => ({ ...n, open: false }))}
+      />
+    </Box>
   );
 }
