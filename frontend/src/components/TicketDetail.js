@@ -1,8 +1,14 @@
-// frontend/src/components/TicketDetail.js
 import React, { useEffect, useState } from 'react';
 import {
-  Container, Typography, TextField, Button,
-  MenuItem, List, ListItem, ListItemText, Box
+  Container,
+  Typography,
+  TextField,
+  Button,
+  MenuItem,
+  List,
+  ListItem,
+  ListItemText,
+  Box
 } from '@mui/material';
 import { useParams } from 'react-router-dom';
 import api from '../services/api';
@@ -16,30 +22,25 @@ export default function TicketDetail() {
   const [prioridades, setPrioridades] = useState([]);
 
   useEffect(() => {
-    // 1) Buscar dados iniciais
+    // dados iniciais
     api.get(`/tickets/${id}`)
       .then(res => setTicket(res.data))
-      .catch(err => {
-        console.error(err);
-        alert('Erro ao carregar ticket');
-      });
+      .catch(() => alert('Erro ao carregar ticket'));
+
     api.get('/categories')
       .then(res => setCategorias(res.data))
-      .catch(err => console.error(err));
+      .catch(console.error);
+
     api.get('/priorities')
       .then(res => setPrioridades(res.data))
-      .catch(err => console.error(err));
+      .catch(console.error);
 
-    // 2) Configurar Socket.IO
-    const socket = socketClient(
-      process.env.REACT_APP_API_URL || 'http://localhost:5000'
-    );
+    // Socket.IO para atualizações em tempo real
+    const socket = socketClient(process.env.REACT_APP_API_URL || 'http://localhost:5000');
     socket.emit('joinTicketRoom', id);
     socket.on('ticketUpdated', updated => {
       if (updated.id === id) setTicket(updated);
     });
-
-    // 3) Cleanup: remover listener e desconectar socket
     return () => {
       socket.off('ticketUpdated');
       socket.disconnect();
@@ -52,11 +53,10 @@ export default function TicketDetail() {
       description: ticket.description,
       status: ticket.status,
       categoryId: ticket.categoryId,
-      priorityId: ticket.priorityId,
+      priorityId: ticket.priorityId
     })
       .then(() => alert('Chamado atualizado!'))
       .catch(err => {
-        console.error(err);
         alert(err.response?.data?.message || 'Erro ao salvar');
       });
   };
@@ -65,14 +65,10 @@ export default function TicketDetail() {
     api.post(`/tickets/${id}/comments`, { content: comment })
       .then(() => {
         setComment('');
-        // Recarrega ticket com comentários
         return api.get(`/tickets/${id}`);
       })
       .then(res => setTicket(res.data))
-      .catch(err => {
-        console.error(err);
-        alert('Erro ao adicionar comentário');
-      });
+      .catch(() => alert('Erro ao adicionar comentário'));
   };
 
   if (!ticket) {
@@ -84,6 +80,10 @@ export default function TicketDetail() {
       <Typography variant="h4" gutterBottom>
         Detalhe do Chamado
       </Typography>
+      <Typography variant="subtitle1" gutterBottom>
+        Solicitante: {ticket.requester?.name}
+      </Typography>
+
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <TextField
           label="Título"
@@ -137,11 +137,11 @@ export default function TicketDetail() {
         </Button>
       </Box>
 
-      <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+      <Typography variant="h6" sx={{ mt: 4 }}>
         Comentários
       </Typography>
       <List>
-        {ticket.Comments.map(c => (
+        {ticket.Comments?.map(c => (
           <ListItem key={c.id}>
             <ListItemText primary={c.content} secondary={c.User.name} />
           </ListItem>

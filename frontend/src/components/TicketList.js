@@ -3,12 +3,22 @@ import api from '../services/api';
 import Spinner from './Spinner';
 import Notification from './Notification';
 import {
-  Table, TableHead, TableBody, TableRow, TableCell, TablePagination,
-  TextField, Box, Button, IconButton
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  TablePagination,
+  TextField,
+  Box,
+  Button,
+  IconButton
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DeleteIcon from '@mui/icons-material/Delete';
+import LockIcon from '@mui/icons-material/Lock';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
 
 export default function TicketList() {
   const [tickets, setTickets] = useState([]);
@@ -21,10 +31,10 @@ export default function TicketList() {
   const fetchTickets = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/tickets', { params: { q: filter } });
-      setTickets(data.tickets || data);
+      const res = await api.get('/tickets');
+      setTickets(res.data);
     } catch (err) {
-      setNotif({ open: true, message: 'Erro ao carregar tickets', severity: 'error' });
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -32,7 +42,7 @@ export default function TicketList() {
 
   useEffect(() => {
     fetchTickets();
-  }, [filter]);
+  }, []);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Tem certeza que deseja excluir este chamado?')) return;
@@ -45,13 +55,35 @@ export default function TicketList() {
     }
   };
 
+  const handleToggle = async (ticket) => {
+    const newStatus = ticket.status === 'Fechado' ? 'Aberto' : 'Fechado';
+    try {
+      const res = await api.put(`/tickets/${ticket.id}`, { status: newStatus });
+      setTickets((prev) =>
+        prev.map((t) => (t.id === ticket.id ? res.data : t))
+      );
+      setNotif({
+        open: true,
+        message: `Chamado ${newStatus === 'Fechado' ? 'fechado' : 'reaberto'} com sucesso!`,
+        severity: 'success'
+      });
+    } catch (err) {
+      console.error(err);
+      setNotif({ open: true, message: 'Erro ao atualizar status', severity: 'error' });
+    }
+  };
+
+  const filtered = tickets.filter((t) =>
+    t.title.toLowerCase().includes(filter.toLowerCase())
+  );
+
   return (
-    <Box>
+    <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
         <TextField
           label="Buscar"
           value={filter}
-          onChange={e => setFilter(e.target.value)}
+          onChange={(e) => setFilter(e.target.value)}
           fullWidth
         />
         <Button
@@ -72,28 +104,33 @@ export default function TicketList() {
             <TableHead>
               <TableRow>
                 <TableCell>Título</TableCell>
+                <TableCell>Solicitante</TableCell>
+                <TableCell>Prioridade</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Ações</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {tickets
+              {filtered
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map(ticket => (
+                .map((ticket) => (
                   <TableRow key={ticket.id}>
                     <TableCell>{ticket.title}</TableCell>
+                    <TableCell>{ticket.requester?.name}</TableCell>
+                    <TableCell>{ticket.Priority?.level}</TableCell>
                     <TableCell>{ticket.status}</TableCell>
                     <TableCell>
-                      <IconButton
-                        component={RouterLink}
-                        to={`/tickets/${ticket.id}`}
-                      >
+                      <IconButton component={RouterLink} to={`/tickets/${ticket.id}`}>
                         <VisibilityIcon />
                       </IconButton>
-                      <IconButton
-                        onClick={() => handleDelete(ticket.id)}
-                        color="error"
-                      >
+                      <IconButton onClick={() => handleToggle(ticket)}>
+                        {ticket.status === 'Fechado' ? (
+                          <LockOpenIcon />
+                        ) : (
+                          <LockIcon />
+                        )}
+                      </IconButton>
+                      <IconButton onClick={() => handleDelete(ticket.id)} color="error">
                         <DeleteIcon />
                       </IconButton>
                     </TableCell>
@@ -103,11 +140,14 @@ export default function TicketList() {
           </Table>
           <TablePagination
             component="div"
-            count={tickets.length}
+            count={filtered.length}
             page={page}
             onPageChange={(_, p) => setPage(p)}
             rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={e => { setRowsPerPage(+e.target.value); setPage(0); }}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(+e.target.value);
+              setPage(0);
+            }}
           />
         </>
       )}
@@ -116,7 +156,7 @@ export default function TicketList() {
         open={notif.open}
         message={notif.message}
         severity={notif.severity}
-        onClose={() => setNotif(n => ({ ...n, open: false }))}
+        onClose={() => setNotif((n) => ({ ...n, open: false }))}
       />
     </Box>
   );
