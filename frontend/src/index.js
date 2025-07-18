@@ -1,9 +1,10 @@
+// frontend/src/index.js
 import React, { useState, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import App from './App';
-import { AuthProvider } from './context/AuthContext';
-import { ColorModeContext } from './context/ColorModeContext';
+import { AuthProvider } from './contexts/AuthContext';            // <-- corrigido
+import { ColorModeContext } from './contexts/ColorModeContext';   // <-- corrigido
 
 const container = document.getElementById('root');
 const root = createRoot(container);
@@ -22,7 +23,9 @@ function Main() {
     const theme = useMemo(
         () =>
             createTheme({
-                palette: { mode }
+                palette: {
+                    mode
+                }
             }),
         [mode]
     );

@@ -7,14 +7,30 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
 
     async function login(email, password) {
-        // envia { email, password } como JSON
-        const response = await api.post('/auth/login', { email, password });
-        setUser(response.data.user);
-        return response.data;
+        try {
+            const response = await api.post('/auth/login', { email, password });
+            setUser(response.data.user);
+            return response.data;
+        } catch (err) {
+            console.error('Login error response:', err.response);
+            throw err;
+        }
     }
 
-    async function register(name, email, password) {
-        return api.post('/auth/register', { name, email, password });
+    async function register(name, email, password, role) {
+        try {
+            // envia também o campo 'role' com valor 'solicitante' ou 'ti'
+            const response = await api.post('/auth/register', {
+                name,
+                email,
+                password,
+                role
+            });
+            return response.data;
+        } catch (err) {
+            console.error('Register error response:', err.response);
+            throw err;
+        }
     }
 
     return (
